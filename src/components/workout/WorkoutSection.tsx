@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { WorkoutExerciseCard } from './WorkoutExerciseCard';
 import { ExerciseSelector } from './ExerciseSelector';
-import { TimerDisplay } from './TimerDisplay';
 import { SavedEntriesDialog } from './SavedEntriesDialog';
-import { Button, ConfirmDialog, Input } from '../ui';
+import { ConfirmDialog } from '../ui';
 import { useWorkout, useTimer, useExercises } from '../../hooks';
 import type { Workout } from '../../types';
 
@@ -20,31 +19,17 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
   const [isExerciseSelectorOpen, setIsExerciseSelectorOpen] = useState(false);
   const [showSavedEntriesDialog, setShowSavedEntriesDialog] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  const [showActionMenu, setShowActionMenu] = useState(false);
-  const actionMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
-        setShowActionMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // On first mount, load saved entries (per spec: initNewWorkout shows saved entries dialog)
+  // On first mount, load saved entries
   useEffect(() => {
     if (!initialized) {
-      workout.loadSavedEntriesList().then(() => {
-        setInitialized(true);
-      });
+      workout.loadSavedEntriesList().then(() => setInitialized(true));
     }
   }, [initialized, workout]);
 
-  // Show saved entries dialog after loading (separate effect to handle state update)
+  // Show saved entries dialog after loading
   useEffect(() => {
     if (initialized && !workout.loadingSavedEntries && workout.savedEntries.length > 0) {
       setShowSavedEntriesDialog(true);
@@ -58,10 +43,9 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
     }
     workout.startWorkout();
     timer.start();
-    setShowActionMenu(false);
   };
 
-  const handleEndWorkout = async () => {
+  const handleFinishWorkout = async () => {
     const success = await workout.endWorkout();
     if (success) {
       timer.reset();
@@ -69,9 +53,10 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
     setShowEndConfirm(false);
   };
 
-  const handleSaveEntry = () => {
-    workout.saveCurrentEntry();
-    setShowActionMenu(false);
+  const handleDiscard = () => {
+    workout.resetWorkout();
+    timer.reset();
+    setShowDiscardConfirm(false);
   };
 
   const handleSelectSavedEntry = (entry: Workout) => {
@@ -85,171 +70,120 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
   };
 
   const selectedExerciseIds = workout.state.exercises.map((e) => e.exerciseId);
+  const isActive = workout.state.isActive;
+  const hasExercises = workout.state.exercises.length > 0;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header with action menu */}
-      <div className="shrink-0 px-4 pt-4 pb-2">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)]">
-            {workout.state.editingWorkoutId ? 'Edit Workout' : 'New Workout'}
-          </h1>
-          
-          {/* Action menu dropdown */}
-          <div className="relative" ref={actionMenuRef}>
-            <button
-              onClick={() => setShowActionMenu(!showActionMenu)}
-              className="p-2 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-secondary)] dark:text-[var(--color-dark-text-muted)] dark:hover:text-[var(--color-dark-text-primary)] dark:hover:bg-[var(--color-dark-surface-secondary)] transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
-              </svg>
-            </button>
+    <div className="flex flex-col h-full bg-[var(--color-background)] dark:bg-[var(--color-dark-background)]">
+      
+      {/* ═══════════════════════════════════════════════════════════════
+          WORKOUT HEADER - Consolidated state + timer + metadata
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="shrink-0 px-4 pt-4 pb-3">
+        {isActive ? (
+          // Active workout header
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-success)]">
+                  Workout in Progress
+                </p>
+                <h1 className="text-xl font-bold text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] mt-0.5">
+                  {workout.state.name || 'Workout'}
+                </h1>
+              </div>
+              {/* Timer - Large and prominent */}
+              <div className="text-right">
+                <p className="text-3xl font-mono font-bold text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] tabular-nums">
+                  {timer.formattedTime}
+                </p>
+              </div>
+            </div>
             
-            <AnimatePresence>
-              {showActionMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2 w-48 rounded-xl bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] shadow-lg z-50 overflow-hidden"
-                >
-                  {!workout.state.isActive ? (
-                    <>
-                      <button
-                        onClick={handleStartWorkout}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] hover:bg-[var(--color-surface-secondary)] dark:hover:bg-[var(--color-dark-surface-secondary)] flex items-center gap-3"
-                      >
-                        <svg className="w-4 h-4 text-[var(--color-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-                        </svg>
-                        Start Workout
-                      </button>
-                      <button
-                        onClick={handleSaveEntry}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] hover:bg-[var(--color-surface-secondary)] dark:hover:bg-[var(--color-dark-surface-secondary)] flex items-center gap-3"
-                      >
-                        <svg className="w-4 h-4 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-                        </svg>
-                        Save for Later
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handleEndWorkout}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] hover:bg-[var(--color-surface-secondary)] dark:hover:bg-[var(--color-dark-surface-secondary)] flex items-center gap-3"
-                      >
-                        <svg className="w-4 h-4 text-[var(--color-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Save Workout
-                      </button>
-                      <button
-                        onClick={() => { setShowEndConfirm(true); setShowActionMenu(false); }}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-[var(--color-error)] hover:bg-[var(--color-error-muted)] flex items-center gap-3"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
-                        </svg>
-                        Discard Workout
-                      </button>
-                    </>
-                  )}
-                </motion.div>
+            {/* Session info bar */}
+            <div className="flex items-center gap-4 text-[13px] text-[var(--color-text-secondary)] dark:text-[var(--color-dark-text-secondary)]">
+              <span>{workout.state.date}</span>
+              {workout.state.bodyWeight && (
+                <span>{workout.state.bodyWeight} kg</span>
               )}
-            </AnimatePresence>
+              <span>{workout.state.exercises.length} exercise{workout.state.exercises.length !== 1 ? 's' : ''}</span>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-2 pb-20 space-y-4">
-        {/* Timer (shown when active) */}
-        <AnimatePresence>
-          {workout.state.isActive && (
-            <TimerDisplay
-              formattedTime={timer.formattedTime}
-              isRunning={timer.isRunning}
-              onToggle={timer.toggle}
-              onReset={timer.reset}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Workout details - stacked on mobile for iPhone */}
-        <div className="space-y-3">
-          <Input
-            label="Date"
-            type="date"
-            value={workout.state.date}
-            onChange={(e) => workout.setWorkoutDate(e.target.value)}
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Body Weight"
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              value={workout.state.bodyWeight}
-              onChange={(e) => workout.setBodyWeight(e.target.value)}
-              placeholder="kg"
-            />
-            <Input
-              label="Workout Name"
+        ) : (
+          // Setup header
+          <div className="space-y-4">
+            <h1 className="text-xl font-bold text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)]">
+              New Workout
+            </h1>
+            
+            {/* Compact form row */}
+            <div className="flex gap-3">
+              <input
+                type="date"
+                value={workout.state.date}
+                onChange={(e) => workout.setWorkoutDate(e.target.value)}
+                className="flex-1 px-3 py-2.5 text-sm bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] rounded-xl text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
+              />
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                value={workout.state.bodyWeight}
+                onChange={(e) => workout.setBodyWeight(e.target.value)}
+                placeholder="BW kg"
+                className="w-24 px-3 py-2.5 text-sm bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] rounded-xl text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
+              />
+            </div>
+            
+            {/* Workout name - Optional */}
+            <input
+              type="text"
               value={workout.state.name}
               onChange={(e) => workout.setWorkoutName(e.target.value)}
-              placeholder="e.g., Push Day"
+              placeholder="Workout name (optional)"
+              className="w-full px-3 py-2.5 text-sm bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] rounded-xl text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50"
             />
           </div>
+        )}
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          EXERCISE LOG - Main scrollable content
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex-1 overflow-y-auto px-4 pb-24">
+        {/* Section header with Add Exercise */}
+        <div className="flex items-center justify-between py-3 sticky top-0 bg-[var(--color-background)] dark:bg-[var(--color-dark-background)] z-10">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]">
+            Exercises
+          </h2>
+          <button
+            onClick={() => setIsExerciseSelectorOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] rounded-full active:scale-95 transition-transform"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add
+          </button>
         </div>
 
-        {/* Exercises */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)]">
-              Exercises
-            </h2>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setIsExerciseSelectorOpen(true)}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add
-            </Button>
-          </div>
-
-          {workout.state.exercises.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="py-12 text-center"
-            >
-              <svg
-                className="w-12 h-12 mx-auto text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)] mb-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+        {/* Exercise list */}
+        {!hasExercises ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-full bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
               </svg>
-              <p className="text-[var(--color-text-secondary)] dark:text-[var(--color-dark-text-secondary)] mb-3">
-                No exercises added yet
-              </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsExerciseSelectorOpen(true)}
-              >
-                Add your first exercise
-              </Button>
-            </motion.div>
-          ) : (
+            </div>
+            <p className="text-[var(--color-text-secondary)] dark:text-[var(--color-dark-text-secondary)] mb-1">
+              No exercises yet
+            </p>
+            <p className="text-sm text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]">
+              Tap "Add" to get started
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
             <AnimatePresence mode="popLayout">
               {workout.state.exercises.map((exercise) => (
                 <WorkoutExerciseCard
@@ -265,11 +199,58 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
                 />
               ))}
             </AnimatePresence>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Exercise Selector Dialog */}
+      {/* ═══════════════════════════════════════════════════════════════
+          FIXED BOTTOM ACTION BAR - Stable, intentional, non-intrusive
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="shrink-0 border-t border-[var(--color-border)] dark:border-[var(--color-dark-border)] bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] px-4 py-3 pb-safe">
+        {!isActive ? (
+          // Pre-workout state
+          <div className="flex gap-3">
+            <button
+              onClick={() => workout.saveCurrentEntry()}
+              className="flex-1 py-3 text-[14px] font-medium text-[var(--color-text-secondary)] dark:text-[var(--color-dark-text-secondary)] bg-[var(--color-surface-secondary)] dark:bg-[var(--color-dark-surface-secondary)] rounded-xl active:scale-[0.98] transition-transform"
+            >
+              Save Draft
+            </button>
+            <button
+              onClick={handleStartWorkout}
+              disabled={!hasExercises}
+              className="flex-[2] py-3 text-[14px] font-semibold text-white bg-[var(--color-accent)] dark:bg-[var(--color-dark-accent)] dark:text-[var(--color-dark-background)] rounded-xl active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Start Workout
+            </button>
+          </div>
+        ) : (
+          // Active workout state
+          <div className="flex gap-3">
+            {/* Pause/Resume - Secondary, subtle */}
+            <button
+              onClick={() => timer.isRunning ? timer.pause() : timer.start()}
+              className="px-4 py-3 text-[14px] font-medium text-[var(--color-text-secondary)] dark:text-[var(--color-dark-text-secondary)] bg-[var(--color-surface-secondary)] dark:bg-[var(--color-dark-surface-secondary)] rounded-xl active:scale-[0.98] transition-transform"
+            >
+              {timer.isRunning ? 'Pause' : 'Resume'}
+            </button>
+            
+            {/* Finish Workout - Primary action */}
+            <button
+              onClick={() => setShowEndConfirm(true)}
+              className="flex-1 py-3 text-[14px] font-semibold text-white bg-[var(--color-success)] rounded-xl active:scale-[0.98] transition-transform"
+            >
+              Finish Workout
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          DIALOGS
+          ═══════════════════════════════════════════════════════════════ */}
+      
+      {/* Exercise Selector */}
       <ExerciseSelector
         isOpen={isExerciseSelectorOpen}
         onClose={() => setIsExerciseSelectorOpen(false)}
@@ -288,41 +269,27 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
         onCreateNew={handleCreateNew}
       />
 
-      {/* End Workout Confirmation */}
+      {/* Finish Workout Confirmation */}
       <ConfirmDialog
         isOpen={showEndConfirm}
-        onConfirm={handleEndWorkout}
+        onConfirm={handleFinishWorkout}
         onCancel={() => setShowEndConfirm(false)}
-        title="End Workout"
-        message="Do you want to save this workout to your history?"
-        confirmText="Yes, Save"
+        title="Finish Workout"
+        message="Save this workout to your history?"
+        confirmText="Save Workout"
         cancelText="Cancel"
       />
 
-      {/* Floating Action Button - Always visible */}
-      <div className="fixed bottom-20 right-4 z-40">
-        {!workout.state.isActive ? (
-          <button
-            onClick={handleStartWorkout}
-            className="flex items-center gap-2 px-5 py-3 rounded-full bg-[var(--color-accent)] dark:bg-[var(--color-dark-accent)] text-white dark:text-[var(--color-dark-background)] font-medium shadow-lg active:scale-95 transition-transform"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-            </svg>
-            Start
-          </button>
-        ) : (
-          <button
-            onClick={handleEndWorkout}
-            className="flex items-center gap-2 px-5 py-3 rounded-full bg-[var(--color-success)] text-white font-medium shadow-lg active:scale-95 transition-transform"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Save
-          </button>
-        )}
-      </div>
+      {/* Discard Confirmation */}
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onConfirm={handleDiscard}
+        onCancel={() => setShowDiscardConfirm(false)}
+        title="Discard Workout"
+        message="Are you sure? This cannot be undone."
+        confirmText="Discard"
+        cancelText="Keep Workout"
+      />
     </div>
   );
 }
