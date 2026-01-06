@@ -1,8 +1,10 @@
-import { AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { WorkoutHistoryItem } from './WorkoutHistoryItem';
 import { WorkoutHistorySkeleton, Button } from '../ui';
 import { useWorkoutHistory } from '../../hooks';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { getGreeting } from '../../lib/utils';
 import type { Workout } from '../../types';
 
@@ -11,15 +13,18 @@ interface HistorySectionProps {
 }
 
 export function HistorySection({ onEditWorkout }: HistorySectionProps) {
-  const { userData } = useAuth();
+  const { user, userData, logout } = useAuth();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const { workouts, loading, error, refresh } = useWorkoutHistory();
+  const [showProfile, setShowProfile] = useState(false);
 
   const greeting = getGreeting();
   const firstName = userData?.name?.split(' ')[0] || 'there';
+  const userEmail = user?.email || '';
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with greeting (per spec: personalized with user's name) */}
+      {/* Header with greeting + profile button */}
       <div className="shrink-0 px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-2">
           <div>
@@ -30,16 +35,86 @@ export function HistorySection({ onEditWorkout }: HistorySectionProps) {
               Workout History
             </h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={refresh}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-          </Button>
+          
+          {/* Profile button */}
+          <button
+            onClick={() => setShowProfile(!showProfile)}
+            className="w-10 h-10 rounded-full bg-[var(--color-accent)] dark:bg-[var(--color-dark-accent)] flex items-center justify-center text-white dark:text-[var(--color-dark-background)] font-semibold text-sm"
+          >
+            {firstName.charAt(0).toUpperCase()}
+          </button>
         </div>
         <p className="text-sm text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]">
           {loading ? 'Loading...' : `${workouts.length} workout${workouts.length !== 1 ? 's' : ''} recorded`}
         </p>
       </div>
+
+      {/* Profile dropdown */}
+      <AnimatePresence>
+        {showProfile && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="shrink-0 overflow-hidden"
+          >
+            <div className="mx-4 mb-3 p-4 rounded-xl bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)]">
+              {/* User info */}
+              <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border)] dark:border-[var(--color-dark-border)]">
+                <div className="w-12 h-12 rounded-full bg-[var(--color-accent)] dark:bg-[var(--color-dark-accent)] flex items-center justify-center text-white dark:text-[var(--color-dark-background)] font-bold text-lg">
+                  {firstName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] truncate">
+                    {userData?.name || 'User'}
+                  </p>
+                  <p className="text-sm text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)] truncate">
+                    {userEmail}
+                  </p>
+                </div>
+              </div>
+
+              {/* Settings */}
+              <div className="pt-3 space-y-1">
+                {/* Theme toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg active:bg-[var(--color-surface-secondary)] dark:active:bg-[var(--color-dark-surface-secondary)] transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {resolvedTheme === 'dark' ? (
+                      <svg className="w-5 h-5 text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                      </svg>
+                    )}
+                    <span className="text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)]">
+                      {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
+                    </span>
+                  </div>
+                  <svg className="w-4 h-4 text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+
+                {/* Sign out */}
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--color-error)] active:bg-[var(--color-error-bg)] transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                  </svg>
+                  <span>Sign out</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Workout List */}
       <div className="flex-1 overflow-y-auto px-4 py-2 pb-20">

@@ -30,21 +30,19 @@ const navItems: Array<{
     id: 'workout',
     label: 'Workout',
     icon: (active) => (
-      <svg className="w-6 h-6" fill={active ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={active ? 0 : 1.5}
-          d="M12 4.5v15m7.5-7.5h-15"
-        />
-        {active && (
-          <circle cx="12" cy="12" r="10" fill="currentColor" />
-        )}
-        {active && (
-          <path d="M12 7v10M7 12h10" stroke="white" strokeWidth="2" strokeLinecap="round" />
-        )}
-        {!active && (
-          <circle cx="12" cy="12" r="9" strokeWidth="1.5" fill="none" />
+      <svg className="w-6 h-6" viewBox="0 0 24 24">
+        {active ? (
+          // Filled state - solid circle with contrasting plus
+          <>
+            <circle cx="12" cy="12" r="10" fill="currentColor" />
+            <path d="M12 7v10M7 12h10" stroke="var(--color-dark-background)" strokeWidth="2" strokeLinecap="round" />
+          </>
+        ) : (
+          // Outline state - circle outline with plus
+          <>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" fill="none" />
+            <path d="M12 8v8M8 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </>
         )}
       </svg>
     ),
