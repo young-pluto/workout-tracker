@@ -58,10 +58,10 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--color-background)] dark:bg-[var(--color-dark-background)]">
-      {/* Theme toggle - fixed top right */}
+      {/* Theme toggle - fixed top left to avoid timer overlap */}
       <button
         onClick={toggleTheme}
-        className="fixed top-4 right-4 z-50 p-2 rounded-xl bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-muted)] dark:hover:text-[var(--color-dark-text-primary)] transition-colors shadow-sm"
+        className="fixed top-4 left-4 z-50 p-2 rounded-xl bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] text-[var(--color-text-muted)] active:text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-muted)] dark:active:text-[var(--color-dark-text-primary)] transition-colors shadow-sm"
         title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
       >
         {resolvedTheme === 'dark' ? (
