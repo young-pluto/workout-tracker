@@ -179,31 +179,32 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
           )}
         </AnimatePresence>
 
-        {/* Workout details */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Workout details - stacked on mobile for iPhone */}
+        <div className="space-y-3">
           <Input
             label="Date"
             type="date"
             value={workout.state.date}
             onChange={(e) => workout.setWorkoutDate(e.target.value)}
           />
-          <Input
-            label="Body Weight (kg)"
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            value={workout.state.bodyWeight}
-            onChange={(e) => workout.setBodyWeight(e.target.value)}
-            placeholder="Optional"
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Body Weight"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              value={workout.state.bodyWeight}
+              onChange={(e) => workout.setBodyWeight(e.target.value)}
+              placeholder="kg"
+            />
+            <Input
+              label="Workout Name"
+              value={workout.state.name}
+              onChange={(e) => workout.setWorkoutName(e.target.value)}
+              placeholder="e.g., Push Day"
+            />
+          </div>
         </div>
-
-        <Input
-          label="Workout Name"
-          value={workout.state.name}
-          onChange={(e) => workout.setWorkoutName(e.target.value)}
-          placeholder="Optional (e.g., Push Day)"
-        />
 
         {/* Exercises */}
         <div className="space-y-3">
@@ -297,6 +298,31 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
         confirmText="Yes, Save"
         cancelText="Cancel"
       />
+
+      {/* Floating Action Button - Always visible */}
+      <div className="fixed bottom-20 right-4 z-40">
+        {!workout.state.isActive ? (
+          <button
+            onClick={handleStartWorkout}
+            className="flex items-center gap-2 px-5 py-3 rounded-full bg-[var(--color-accent)] dark:bg-[var(--color-dark-accent)] text-white dark:text-[var(--color-dark-background)] font-medium shadow-lg active:scale-95 transition-transform"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+            </svg>
+            Start
+          </button>
+        ) : (
+          <button
+            onClick={handleEndWorkout}
+            className="flex items-center gap-2 px-5 py-3 rounded-full bg-[var(--color-success)] text-white font-medium shadow-lg active:scale-95 transition-transform"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Save
+          </button>
+        )}
+      </div>
     </div>
   );
 }

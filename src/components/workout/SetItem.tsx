@@ -18,9 +18,23 @@ export function SetItem({
   onDelete,
   canDelete,
 }: SetItemProps) {
+  // Handle keyboard done button on iOS
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
+      (e.target as HTMLInputElement).blur();
       onSave();
+    }
+  };
+
+  // Handle form submission via blur on iOS
+  const handleBlur = () => {
+    // Only auto-save if we have some data
+    if (set.weight || set.reps) {
+      // Small delay to allow any other interactions first
+      setTimeout(() => {
+        onSave();
+      }, 100);
     }
   };
 
@@ -30,7 +44,7 @@ export function SetItem({
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-surface-secondary)] dark:bg-[var(--color-dark-surface-secondary)] cursor-pointer hover:bg-[var(--color-border)] dark:hover:bg-[var(--color-dark-border)] transition-colors"
+        className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-surface-secondary)] dark:bg-[var(--color-dark-surface-secondary)] cursor-pointer active:bg-[var(--color-border)] dark:active:bg-[var(--color-dark-border)] transition-colors"
         onClick={() => onUpdate({ isSaved: false })}
       >
         <span className="w-6 text-center text-sm font-medium text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]">
@@ -73,28 +87,32 @@ export function SetItem({
         {setNumber}
       </span>
 
-      {/* Weight input */}
+      {/* Weight input - iOS optimized */}
       <div className="flex-1 min-w-0">
         <input
           type="number"
           inputMode="decimal"
+          enterKeyHint="done"
           step="0.5"
           value={set.weight}
           onChange={(e) => onUpdate({ weight: e.target.value })}
           onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
           placeholder="Weight"
           className="w-full px-3 py-2.5 text-sm bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] rounded-lg text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] placeholder:text-[var(--color-text-muted)] dark:placeholder:text-[var(--color-dark-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] dark:focus:ring-[var(--color-dark-accent)]"
         />
       </div>
 
-      {/* Reps input */}
+      {/* Reps input - iOS optimized */}
       <div className="flex-1 min-w-0">
         <input
           type="number"
           inputMode="numeric"
+          enterKeyHint="done"
           value={set.reps}
           onChange={(e) => onUpdate({ reps: e.target.value })}
           onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
           placeholder="Reps"
           className="w-full px-3 py-2.5 text-sm bg-[var(--color-surface)] dark:bg-[var(--color-dark-surface)] border border-[var(--color-border)] dark:border-[var(--color-dark-border)] rounded-lg text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] placeholder:text-[var(--color-text-muted)] dark:placeholder:text-[var(--color-dark-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] dark:focus:ring-[var(--color-dark-accent)]"
         />
@@ -103,7 +121,7 @@ export function SetItem({
       {/* Save button */}
       <button
         onClick={onSave}
-        className="p-2.5 rounded-lg bg-[var(--color-success)] text-white hover:bg-green-600 transition-colors shrink-0"
+        className="p-2.5 rounded-lg bg-[var(--color-success)] text-white active:bg-green-600 transition-colors shrink-0"
         title="Save set"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,7 +133,7 @@ export function SetItem({
       <button
         onClick={onDelete}
         disabled={!canDelete}
-        className="p-2.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--color-error-muted)] dark:text-[var(--color-dark-text-muted)] transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-[var(--color-text-muted)] disabled:hover:bg-transparent"
+        className="p-2.5 rounded-lg text-[var(--color-text-muted)] active:text-[var(--color-error)] active:bg-[var(--color-error-muted)] dark:text-[var(--color-dark-text-muted)] transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
         title={canDelete ? 'Delete set' : 'Cannot delete last set'}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
