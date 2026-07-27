@@ -3,12 +3,18 @@ import { Dialog, Button, Input, Select } from '../ui';
 import type { Exercise, ExerciseCategory } from '../../types';
 import { addExercise, updateExercise } from '../../lib/db';
 import { useAuth } from '../../contexts/AuthContext';
+import { MUSCLE_GROUPS } from '../../lib/utils';
 
 const categoryOptions = [
   { value: 'strength', label: 'Strength' },
   { value: 'cardio', label: 'Cardio' },
   { value: 'flexibility', label: 'Flexibility' },
   { value: 'other', label: 'Other' },
+];
+
+const muscleGroupOptions = [
+  { value: '', label: 'Unassigned' },
+  ...MUSCLE_GROUPS.map((m) => ({ value: m, label: m })),
 ];
 
 interface ExerciseFormProps {
@@ -23,6 +29,7 @@ export function ExerciseForm({ isOpen, onClose, exercise }: ExerciseFormProps) {
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState<ExerciseCategory>('strength');
+  const [muscleGroup, setMuscleGroup] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,10 +40,12 @@ export function ExerciseForm({ isOpen, onClose, exercise }: ExerciseFormProps) {
       if (exercise) {
         setName(exercise.name);
         setCategory(exercise.category);
+        setMuscleGroup(exercise.muscleGroup || '');
         setDescription(exercise.description || '');
       } else {
         setName('');
         setCategory('strength');
+        setMuscleGroup('');
         setDescription('');
       }
       setError(null);
@@ -62,6 +71,7 @@ export function ExerciseForm({ isOpen, onClose, exercise }: ExerciseFormProps) {
         await updateExercise(user.uid, exercise.id, {
           name: name.trim(),
           category,
+          muscleGroup,
           description: description.trim(),
         });
       } else {
@@ -69,7 +79,8 @@ export function ExerciseForm({ isOpen, onClose, exercise }: ExerciseFormProps) {
           user.uid,
           name.trim(),
           category,
-          description.trim()
+          description.trim(),
+          muscleGroup
         );
       }
       onClose();
@@ -107,6 +118,13 @@ export function ExerciseForm({ isOpen, onClose, exercise }: ExerciseFormProps) {
           value={category}
           onChange={(e) => setCategory(e.target.value as ExerciseCategory)}
           options={categoryOptions}
+        />
+
+        <Select
+          label="Muscle group"
+          value={muscleGroup}
+          onChange={(e) => setMuscleGroup(e.target.value)}
+          options={muscleGroupOptions}
         />
 
         <Input

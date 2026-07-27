@@ -66,13 +66,15 @@ export function useWorkout(): UseWorkoutReturn {
         sets[setKey] = {
           weight: set.weight,
           reps: set.reps,
+          rpe: set.rpe || '',
           remarks: set.remarks,
         };
       });
-      
+
       exercises[ex.exerciseId] = {
         name: ex.name,
         category: ex.category,
+        muscleGroup: ex.muscleGroup || '',
         sets,
       };
     });
@@ -141,11 +143,13 @@ export function useWorkout(): UseWorkoutReturn {
         exerciseId: exercise.id,
         name: exercise.name,
         category: exercise.category,
+        muscleGroup: exercise.muscleGroup || '',
         sets: [
           {
             id: generateId(),
             weight: '',
             reps: '',
+            rpe: '',
             remarks: '',
             isSaved: false,
           },
@@ -181,6 +185,7 @@ export function useWorkout(): UseWorkoutReturn {
               id: generateId(),
               weight: '',
               reps: '',
+              rpe: '',
               remarks: '',
               isSaved: false,
             },
@@ -326,16 +331,18 @@ export function useWorkout(): UseWorkoutReturn {
             sets[setKey] = {
               weight: set.weight,
               reps: set.reps,
+              rpe: set.rpe || '',
               remarks: set.remarks,
             };
             setNumber++;
           }
         });
-        
+
         if (Object.keys(sets).length > 0) {
           exercises[ex.exerciseId] = {
             name: ex.name,
             category: ex.category,
+            muscleGroup: ex.muscleGroup || '',
             sets,
           };
         }
@@ -408,6 +415,7 @@ export function useWorkout(): UseWorkoutReturn {
             id: generateId(),
             weight: String(setData.weight || ''),
             reps: String(setData.reps || ''),
+            rpe: setData.rpe != null && setData.rpe !== '' ? String(setData.rpe) : '',
             remarks: setData.remarks || '',
             isSaved: !!(setData.weight || setData.reps),
           }));
@@ -418,6 +426,7 @@ export function useWorkout(): UseWorkoutReturn {
             id: generateId(),
             weight: '',
             reps: '',
+            rpe: '',
             remarks: '',
             isSaved: false,
           });
@@ -427,6 +436,7 @@ export function useWorkout(): UseWorkoutReturn {
           exerciseId,
           name: data.name,
           category: data.category,
+          muscleGroup: data.muscleGroup || '',
           sets,
           isCollapsed: false,
           showHistory: false,
@@ -461,6 +471,7 @@ export function useWorkout(): UseWorkoutReturn {
             id: generateId(),
             weight: String(setData.weight || ''),
             reps: String(setData.reps || ''),
+            rpe: setData.rpe != null && setData.rpe !== '' ? String(setData.rpe) : '',
             remarks: setData.remarks || '',
             isSaved: !!(setData.weight || setData.reps),
           }));
@@ -470,6 +481,7 @@ export function useWorkout(): UseWorkoutReturn {
             id: generateId(),
             weight: '',
             reps: '',
+            rpe: '',
             remarks: '',
             isSaved: false,
           });
@@ -479,6 +491,7 @@ export function useWorkout(): UseWorkoutReturn {
           exerciseId,
           name: data.name,
           category: data.category,
+          muscleGroup: data.muscleGroup || '',
           sets,
           isCollapsed: false,
           showHistory: false,

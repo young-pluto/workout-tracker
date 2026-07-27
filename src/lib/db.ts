@@ -102,13 +102,15 @@ export async function addExercise(
   userId: string,
   name: string,
   category: ExerciseCategory,
-  description: string
+  description: string,
+  muscleGroup: string = ''
 ): Promise<string> {
   const exercisesRef = ref(database, `users/${userId}/exercises`);
   const newRef = push(exercisesRef);
   await set(newRef, {
     name,
     category,
+    muscleGroup,
     description,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -123,7 +125,7 @@ export async function addExercise(
 export async function updateExercise(
   userId: string,
   exerciseId: string,
-  data: { name?: string; category?: ExerciseCategory; description?: string }
+  data: { name?: string; category?: ExerciseCategory; description?: string; muscleGroup?: string }
 ): Promise<void> {
   const exerciseRef = ref(database, `users/${userId}/exercises/${exerciseId}`);
   await update(exerciseRef, {
@@ -214,6 +216,32 @@ export async function getExerciseHistory(
   return workouts.filter((workout) => 
     workout.exercises && workout.exercises[exerciseId]
   );
+}
+
+/**
+ * Get workouts on or after a given date string (YYYY-MM-DD).
+ * Used by the 7-day analysis. Fetches all and filters client-side
+ * to avoid requiring a Firebase index.
+ */
+export async function getWorkoutsSince(
+  userId: string,
+  cutoffDate: string
+): Promise<Workout[]> {
+  const workoutsRef = ref(database, `users/${userId}/workouts`);
+
+  const snapshot = await get(workoutsRef);
+  const workouts: Workout[] = [];
+
+  if (snapshot.exists()) {
+    snapshot.forEach((child) => {
+      const val = child.val();
+      if (val && typeof val.date === 'string' && val.date >= cutoffDate) {
+        workouts.push({ id: child.key!, ...val });
+      }
+    });
+  }
+
+  return workouts;
 }
 
 /**

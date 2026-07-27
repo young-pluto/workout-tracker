@@ -6,6 +6,7 @@ import { ExercisesSection } from './components/exercises';
 import { WorkoutSection } from './components/workout';
 import { HistorySection } from './components/history';
 import { ProgressSection } from './components/progress';
+import { AnalysisSection } from './components/analysis';
 import { BottomNav } from './components/ui/BottomNav';
 import { ToastContainer, Skeleton } from './components/ui';
 import type { AppSection, Exercise } from './types';
@@ -93,6 +94,7 @@ function App() {
               {activeSection === 'history' && (
                 <HistorySection onEditWorkout={handleEditWorkout} />
               )}
+              {activeSection === 'analysis' && <AnalysisSection />}
             </motion.div>
           )}
         </AnimatePresence>

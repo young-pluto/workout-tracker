@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import type { Exercise } from '../../types';
-import { categoryConfig } from '../../lib/utils';
+import { categoryConfig, muscleGroupColor } from '../../lib/utils';
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -48,6 +48,17 @@ export function ExerciseCard({
             >
               {category.label}
             </span>
+            {exercise.muscleGroup && (
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{
+                  backgroundColor: `${muscleGroupColor(exercise.muscleGroup)}20`,
+                  color: muscleGroupColor(exercise.muscleGroup),
+                }}
+              >
+                {exercise.muscleGroup}
+              </span>
+            )}
             <span className="text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]">
               Used in {usageCount} workout{usageCount !== 1 ? 's' : ''}
             </span>

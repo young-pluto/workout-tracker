@@ -125,3 +125,70 @@ export const categoryConfig = {
 export function cn(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ');
 }
+
+/**
+ * Muscle groups available to tag exercises with.
+ */
+export const MUSCLE_GROUPS = [
+  'Chest',
+  'Back',
+  'Shoulders',
+  'Biceps',
+  'Triceps',
+  'Forearms',
+  'Core',
+  'Quads',
+  'Hamstrings',
+  'Glutes',
+  'Calves',
+  'Full Body',
+  'Cardio',
+  'Other',
+] as const;
+
+/** Fallback label used when an exercise has no muscle group assigned */
+export const UNASSIGNED_MUSCLE = 'Unassigned';
+
+/**
+ * A stable, distinct color per muscle group (used in badges & charts)
+ */
+export const muscleGroupColors: Record<string, string> = {
+  Chest: '#2563eb',
+  Back: '#0ea5e9',
+  Shoulders: '#06b6d4',
+  Biceps: '#10b981',
+  Triceps: '#84cc16',
+  Forearms: '#eab308',
+  Core: '#f59e0b',
+  Quads: '#f97316',
+  Hamstrings: '#ef4444',
+  Glutes: '#ec4899',
+  Calves: '#a855f7',
+  'Full Body': '#8b5cf6',
+  Cardio: '#14b8a6',
+  Other: '#64748b',
+  [UNASSIGNED_MUSCLE]: '#94a3b8',
+};
+
+/** Resolve a color for any muscle group string, with a sensible default */
+export function muscleGroupColor(mg: string): string {
+  return muscleGroupColors[mg] || '#64748b';
+}
+
+/**
+ * Compute RPE gradient color (green -> amber -> red across 6..10)
+ */
+export function rpeColor(value: number): string {
+  if (isNaN(value)) return 'var(--color-text-muted)';
+  const t = Math.max(0, Math.min(1, (value - 6) / 4));
+  const hue = 145 - t * 145; // 145 green -> 0 red
+  return `hsl(${hue}, 70%, 45%)`;
+}
+
+/**
+ * Number of logged sets (weight OR reps present) in a Firebase sets object
+ */
+export function countLoggedSets(sets: { [key: string]: { weight?: string | number; reps?: string | number } } | undefined): number {
+  if (!sets) return 0;
+  return Object.values(sets).filter((s) => isSetValid({ weight: s.weight ?? '', reps: s.reps ?? '' })).length;
+}

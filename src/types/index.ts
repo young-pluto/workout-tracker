@@ -25,6 +25,7 @@ export interface Exercise {
   id: string;
   name: string;
   category: ExerciseCategory;
+  muscleGroup?: string; // e.g. "Chest", "Back"; optional (unassigned if absent)
   description: string;
   createdAt: number;
   updatedAt: number;
@@ -38,6 +39,7 @@ export interface Exercise {
 export interface WorkoutSet {
   weight: string | number;
   reps: string | number;
+  rpe?: string | number; // Rate of Perceived Exertion (6-10), optional
   remarks: string;
 }
 
@@ -48,6 +50,7 @@ export interface WorkoutSet {
 export interface WorkoutExercise {
   name: string;
   category: string;
+  muscleGroup?: string; // denormalized from Exercise at save time
   sets: { [key: string]: WorkoutSet }; // set1, set2, etc.
 }
 
@@ -88,6 +91,7 @@ export interface WorkoutEditorExercise {
   exerciseId: string;
   name: string;
   category: string;
+  muscleGroup?: string;
   sets: WorkoutEditorSet[];
   isCollapsed: boolean;
   showHistory: boolean;
@@ -100,6 +104,7 @@ export interface WorkoutEditorSet {
   id: string; // local unique id for React key
   weight: string;
   reps: string;
+  rpe: string; // '' when unset, otherwise "6"-"10" in 0.5 steps
   remarks: string;
   isSaved: boolean;
 }
@@ -107,7 +112,7 @@ export interface WorkoutEditorSet {
 /**
  * Tab/section navigation
  */
-export type AppSection = 'exercises' | 'workout' | 'history';
+export type AppSection = 'exercises' | 'workout' | 'history' | 'analysis';
 
 /**
  * Theme preference
@@ -140,4 +145,28 @@ export interface ExerciseHistoryEntry {
   workoutName: string;
   bodyWeight: number | null;
   sets: WorkoutSet[];
+}
+
+// ==========================================
+// ANALYSIS TYPES
+// ==========================================
+
+/**
+ * Per-muscle-group aggregate over a date window (last 7 days)
+ */
+export interface MuscleGroupStat {
+  muscleGroup: string;
+  sets: number; // total logged sets (volume)
+  frequency: number; // distinct days trained
+}
+
+/**
+ * Full last-7-days analysis summary
+ */
+export interface AnalysisSummary {
+  stats: MuscleGroupStat[]; // sorted by sets desc
+  workouts: number; // workouts in range
+  daysTrained: number; // distinct training days
+  totalSets: number;
+  muscleGroupsHit: number;
 }
