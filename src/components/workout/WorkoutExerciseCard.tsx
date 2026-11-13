@@ -1,12 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SetItem } from './SetItem';
-import type { WorkoutEditorExercise, WorkoutSet } from '../../types';
-import { getExerciseHistory } from '../../lib/db';
+import { SessionBlock } from '../history/SetLine';
+import { ExerciseHistorySheet } from '../history/ExerciseHistorySheet';
+import type { WorkoutEditorExercise } from '../../types';
+import { getExerciseSessions } from '../../lib/db';
+import type { ExerciseSession } from '../../lib/history';
 import { useAuth } from '../../contexts/AuthContext';
+
+/** How many recent sessions the inline "Previous" panel shows */
+const RECENT_SESSIONS = 2;
 
 interface WorkoutExerciseCardProps {
   exercise: WorkoutEditorExercise;
+  /** Workout being edited from History, kept out of its own "Previous" */
+  excludeWorkoutId?: string | null;
   onToggleCollapse: () => void;
   onToggleHistory: () => void;
   onRemove: () => void;
@@ -18,6 +26,7 @@ interface WorkoutExerciseCardProps {
 
 export function WorkoutExerciseCard({
   exercise,
+  excludeWorkoutId,
   onToggleCollapse,
   onToggleHistory,
   onRemove,
@@ -27,32 +36,39 @@ export function WorkoutExerciseCard({
   onDeleteSet,
 }: WorkoutExerciseCardProps) {
   const { user } = useAuth();
-  
-  // History state
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyData, setHistoryData] = useState<Array<{
-    date: string;
-    bodyWeight: number | null;
-    sets: WorkoutSet[];
-  }>>([]);
 
-  // Load history when toggled
+  // Every past session of this exercise (all of history, newest first).
+  // null = not loaded yet.
+  const [sessions, setSessions] = useState<ExerciseSession[] | null>(null);
+  const [historyError, setHistoryError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  // (Re)load whenever the panel opens; reads are cached, so this is cheap.
   useEffect(() => {
-    if (exercise.showHistory && user && historyData.length === 0) {
-      setHistoryLoading(true);
-      getExerciseHistory(user.uid, exercise.exerciseId, 10)
-        .then((workouts) => {
-          const history = workouts.map((w) => ({
-            date: w.date,
-            bodyWeight: w.bodyWeight,
-            sets: Object.values(w.exercises[exercise.exerciseId]?.sets || {}),
-          }));
-          setHistoryData(history);
-        })
-        .catch(console.error)
-        .finally(() => setHistoryLoading(false));
-    }
-  }, [exercise.showHistory, exercise.exerciseId, user]);
+    if (!exercise.showHistory || !user) return;
+    let cancelled = false;
+    getExerciseSessions(user.uid, exercise.exerciseId, excludeWorkoutId)
+      .then((result) => {
+        if (cancelled) return;
+        setSessions(result);
+        setHistoryError(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load exercise history:', err);
+        if (!cancelled) setHistoryError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [exercise.showHistory, exercise.exerciseId, excludeWorkoutId, user, reloadKey]);
+
+  const retryHistory = () => {
+    setHistoryError(false);
+    setReloadKey((k) => k + 1);
+  };
+
+  const closeSheet = useCallback(() => setSheetOpen(false), []);
 
   // Count saved sets for display
   const savedSetsCount = exercise.sets.filter(s => s.isSaved).length;
@@ -107,39 +123,81 @@ export function WorkoutExerciseCard({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.15 }}
           >
-            {/* Previous history - Optional toggle */}
-            {exercise.showHistory && (
-              <div className="px-4 py-2 bg-[var(--color-surface-secondary)]/50 dark:bg-[var(--color-dark-surface-secondary)]/50">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)] mb-2">
-                  Previous
-                </p>
-                {historyLoading ? (
-                  <p className="text-[13px] text-[var(--color-text-muted)]">Loading...</p>
-                ) : historyData.length === 0 ? (
-                  <p className="text-[13px] text-[var(--color-text-muted)]">No previous data</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {historyData.slice(0, 3).map((entry, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[13px]">
-                        <span className="text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)] shrink-0">
-                          {entry.date.slice(5)}
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {entry.sets.map((set, j) => (
-                            <span
-                              key={j}
-                              className="text-[var(--color-text-secondary)] dark:text-[var(--color-dark-text-secondary)]"
-                            >
-                              {set.weight}×{set.reps}
-                            </span>
-                          ))}
-                        </div>
+            {/* Previous sessions - Optional toggle */}
+            <AnimatePresence initial={false}>
+              {exercise.showHistory && (
+                <motion.div
+                  key="previous"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-4 pt-2 pb-2.5 bg-[var(--color-surface-secondary)]/50 dark:bg-[var(--color-dark-surface-secondary)]/50">
+                    <div className="flex items-center justify-between min-h-[32px]">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]">
+                        Previous
+                      </p>
+                      {sessions && sessions.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSheetOpen(true)}
+                          aria-label={`Full history, ${sessions.length} sessions`}
+                          className="-mr-2 h-8 px-2 flex items-center gap-1.5 rounded-lg text-[12px] font-medium text-[var(--color-text-secondary)] dark:text-[var(--color-dark-text-secondary)] active:bg-[var(--color-border)] dark:active:bg-[var(--color-dark-border-subtle)] transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                          </svg>
+                          <span className="tabular-nums">
+                            {sessions.length} session{sessions.length !== 1 ? 's' : ''}
+                          </span>
+                          <svg className="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    {historyError ? (
+                      <div className="flex items-center justify-between py-1.5">
+                        <p className="text-[13px] text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]">
+                          Couldn’t load history
+                        </p>
+                        <button
+                          type="button"
+                          onClick={retryHistory}
+                          className="h-8 px-2 -mr-2 text-[13px] font-medium text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] active:opacity-60"
+                        >
+                          Retry
+                        </button>
                       </div>
-                    ))}
+                    ) : sessions === null ? (
+                      <div className="space-y-2 py-1" aria-label="Loading history">
+                        <div className="skeleton h-3.5 w-24" />
+                        <div className="skeleton h-3.5 w-40" />
+                        <div className="skeleton h-3.5 w-36" />
+                      </div>
+                    ) : sessions.length === 0 ? (
+                      <p className="py-1.5 text-[13px] text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)]">
+                        No previous sessions yet
+                      </p>
+                    ) : (
+                      <div className="divide-y divide-[var(--color-border)]/60 dark:divide-[var(--color-dark-border)]">
+                        {sessions.slice(0, RECENT_SESSIONS).map((session) => (
+                          <SessionBlock
+                            key={session.workoutId}
+                            session={session}
+                            notes="toggle"
+                            className="py-2 first:pt-0.5 last:pb-0"
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Sets list */}
             <div className="px-4 py-2 space-y-1">
@@ -196,6 +254,14 @@ export function WorkoutExerciseCard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ExerciseHistorySheet
+        isOpen={sheetOpen}
+        onClose={closeSheet}
+        exerciseName={exercise.name}
+        muscleGroup={exercise.muscleGroup}
+        sessions={sessions ?? []}
+      />
     </motion.div>
   );
 }

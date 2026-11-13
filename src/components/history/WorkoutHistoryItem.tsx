@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SetLine } from './SetLine';
 import type { Workout } from '../../types';
-import { formatDateDisplay } from '../../lib/utils';
+import { formatDateDisplay, isSetValid } from '../../lib/utils';
+import { orderedSets } from '../../lib/history';
 
 interface WorkoutHistoryItemProps {
   workout: Workout;
@@ -100,38 +102,20 @@ export function WorkoutHistoryItem({ workout, onEdit }: WorkoutHistoryItemProps)
               {/* Exercises list */}
               <div className="divide-y divide-[var(--color-border-subtle)] dark:divide-[var(--color-dark-border)]">
                 {exerciseEntries.map(([id, data]) => {
-                  const sets = Object.entries(data.sets || {}).sort(([a], [b]) => {
-                    const numA = parseInt(a.replace('set', ''), 10);
-                    const numB = parseInt(b.replace('set', ''), 10);
-                    return numA - numB;
-                  });
+                  const sets = orderedSets(data.sets).filter((s) =>
+                    isSetValid({ weight: s.weight ?? '', reps: s.reps ?? '' })
+                  );
 
                   return (
                     <div key={id} className="px-4 py-3">
-                      <h4 className="font-medium text-[14px] text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] mb-2">
+                      <h4 className="font-medium text-[14px] text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)] mb-1">
                         {data.name}
                       </h4>
-                      
-                      {/* Sets as inline text - cleaner than badges */}
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-[var(--color-text-secondary)] dark:text-[var(--color-dark-text-secondary)]">
-                        {sets.map(([setKey, setData], i) => (
-                          <span key={setKey} className="inline-flex items-center">
-                            <span className="text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)] mr-1">
-                              {i + 1}.
-                            </span>
-                            <span className="font-medium text-[var(--color-text-primary)] dark:text-[var(--color-dark-text-primary)]">
-                              {setData.weight && `${setData.weight}kg`}
-                              {setData.weight && setData.reps && ' × '}
-                              {setData.reps && `${setData.reps}`}
-                            </span>
-                            {setData.remarks && (
-                              <span className="text-[var(--color-text-muted)] dark:text-[var(--color-dark-text-muted)] ml-1 italic">
-                                ({setData.remarks})
-                              </span>
-                            )}
-                          </span>
-                        ))}
-                      </div>
+
+                      {/* One row per set, remarks shown underneath */}
+                      {sets.map((set, i) => (
+                        <SetLine key={i} set={set} index={i} notes="inline" />
+                      ))}
                     </div>
                   );
                 })}

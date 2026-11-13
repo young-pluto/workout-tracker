@@ -24,6 +24,7 @@ import {
   type Unsubscribe,
 } from 'firebase/database';
 import { database } from './firebase';
+import { toExerciseSessions, type ExerciseSession } from './history';
 import type { UserData, Exercise, Workout, ExerciseCategory } from '../types';
 
 // ==========================================
@@ -172,6 +173,17 @@ export async function incrementExerciseUsageCount(
 // ==========================================
 
 /**
+ * Newest first by the workout's own date. `timestamp` is rewritten whenever an
+ * old workout is edited, so it only breaks ties between same-day workouts.
+ */
+function byWorkoutDateDesc(a: Workout, b: Workout): number {
+  return (
+    (b.date || '').localeCompare(a.date || '') ||
+    (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0)
+  );
+}
+
+/**
  * Get workout history (one-time, limited to 50)
  * NOTE: We fetch all and sort client-side to avoid requiring Firebase index
  */
@@ -193,55 +205,65 @@ export async function getWorkoutHistory(
     });
   }
   
-  // Sort by timestamp (newest first) and limit
-  workouts.sort((a, b) => {
-    const timeA = a.timestamp || 0;
-    const timeB = b.timestamp || 0;
-    return (typeof timeB === 'number' ? timeB : 0) - (typeof timeA === 'number' ? timeA : 0);
-  });
-  
+  // Newest workout date first (editing an old workout must not move it to the top), then limit
+  workouts.sort(byWorkoutDateDesc);
+
   return workouts.slice(0, limit);
 }
 
 /**
- * Get exercise history from workouts (limited to 10 for inline view)
+ * All completed workouts, newest first by workout date.
+ *
+ * Shared by every exercise card's "Previous" panel and the full history sheet,
+ * so opening several cards in a row costs one read. The cache is short-lived
+ * and dropped whenever a workout is saved.
  */
-export async function getExerciseHistory(
-  userId: string,
-  exerciseId: string,
-  limit: number = 10
-): Promise<Workout[]> {
-  const workouts = await getWorkoutHistory(userId, limit);
-  // Filter to only workouts containing this exercise
-  return workouts.filter((workout) => 
-    workout.exercises && workout.exercises[exerciseId]
-  );
+const WORKOUTS_CACHE_MS = 60_000;
+let workoutsCache: { userId: string; fetchedAt: number; promise: Promise<Workout[]> } | null = null;
+
+export function invalidateWorkoutsCache(): void {
+  workoutsCache = null;
+}
+
+export function getAllWorkouts(userId: string): Promise<Workout[]> {
+  const now = Date.now();
+  if (
+    workoutsCache &&
+    workoutsCache.userId === userId &&
+    now - workoutsCache.fetchedAt < WORKOUTS_CACHE_MS
+  ) {
+    return workoutsCache.promise;
+  }
+
+  const promise = (async () => {
+    const snapshot = await get(ref(database, `users/${userId}/workouts`));
+    const workouts: Workout[] = [];
+    if (snapshot.exists()) {
+      snapshot.forEach((child) => {
+        workouts.push({ id: child.key!, ...child.val() });
+      });
+    }
+    return workouts.sort(byWorkoutDateDesc);
+  })();
+
+  workoutsCache = { userId, fetchedAt: now, promise };
+  promise.catch(() => {
+    if (workoutsCache?.promise === promise) workoutsCache = null;
+  });
+  return promise;
 }
 
 /**
- * Get workouts on or after a given date string (YYYY-MM-DD).
- * Used by the 7-day analysis. Fetches all and filters client-side
- * to avoid requiring a Firebase index.
+ * Every logged session of one exercise across all history, newest first.
+ * `excludeWorkoutId` keeps a workout that is being edited out of its own history.
  */
-export async function getWorkoutsSince(
+export async function getExerciseSessions(
   userId: string,
-  cutoffDate: string
-): Promise<Workout[]> {
-  const workoutsRef = ref(database, `users/${userId}/workouts`);
-
-  const snapshot = await get(workoutsRef);
-  const workouts: Workout[] = [];
-
-  if (snapshot.exists()) {
-    snapshot.forEach((child) => {
-      const val = child.val();
-      if (val && typeof val.date === 'string' && val.date >= cutoffDate) {
-        workouts.push({ id: child.key!, ...val });
-      }
-    });
-  }
-
-  return workouts;
+  exerciseId: string,
+  excludeWorkoutId?: string | null
+): Promise<ExerciseSession[]> {
+  const workouts = await getAllWorkouts(userId);
+  return toExerciseSessions(workouts, exerciseId, excludeWorkoutId);
 }
 
 /**
@@ -287,17 +309,19 @@ export async function saveWorkout(
     ...workout,
     timestamp: serverTimestamp(),
   };
-  
+
   if (existingId) {
     // Update existing workout
     const workoutRef = ref(database, `users/${userId}/workouts/${existingId}`);
     await set(workoutRef, workoutData);
+    invalidateWorkoutsCache();
     return existingId;
   } else {
     // Create new workout
     const workoutsRef = ref(database, `users/${userId}/workouts`);
     const newRef = push(workoutsRef);
     await set(newRef, workoutData);
+    invalidateWorkoutsCache();
     return newRef.key!;
   }
 }

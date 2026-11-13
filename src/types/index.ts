@@ -146,27 +146,3 @@ export interface ExerciseHistoryEntry {
   bodyWeight: number | null;
   sets: WorkoutSet[];
 }
-
-// ==========================================
-// ANALYSIS TYPES
-// ==========================================
-
-/**
- * Per-muscle-group aggregate over a date window (last 7 days)
- */
-export interface MuscleGroupStat {
-  muscleGroup: string;
-  sets: number; // total logged sets (volume)
-  frequency: number; // distinct days trained
-}
-
-/**
- * Full last-7-days analysis summary
- */
-export interface AnalysisSummary {
-  stats: MuscleGroupStat[]; // sorted by sets desc
-  workouts: number; // workouts in range
-  daysTrained: number; // distinct training days
-  totalSets: number;
-  muscleGroupsHit: number;
-}

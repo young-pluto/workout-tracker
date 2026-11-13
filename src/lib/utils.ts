@@ -127,12 +127,16 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
 }
 
 /**
- * Muscle groups available to tag exercises with.
+ * Muscle groups available to tag exercises with. Delts are split by head and
+ * traps listed on their own because volume landmarks differ for each.
  */
 export const MUSCLE_GROUPS = [
   'Chest',
   'Back',
-  'Shoulders',
+  'Traps',
+  'Front Delts',
+  'Side Delts',
+  'Rear Delts',
   'Biceps',
   'Triceps',
   'Forearms',
@@ -155,6 +159,10 @@ export const UNASSIGNED_MUSCLE = 'Unassigned';
 export const muscleGroupColors: Record<string, string> = {
   Chest: '#2563eb',
   Back: '#0ea5e9',
+  Traps: '#6366f1',
+  'Front Delts': '#0891b2',
+  'Side Delts': '#06b6d4',
+  'Rear Delts': '#14b8a6',
   Shoulders: '#06b6d4',
   Biceps: '#10b981',
   Triceps: '#84cc16',
@@ -183,6 +191,14 @@ export function rpeColor(value: number): string {
   const t = Math.max(0, Math.min(1, (value - 6) / 4));
   const hue = 145 - t * 145; // 145 green -> 0 red
   return `hsl(${hue}, 70%, 45%)`;
+}
+
+/** Soft background for an RPE tag, matching rpeColor's hue. */
+export function rpeTint(value: number): string {
+  if (isNaN(value)) return 'transparent';
+  const t = Math.max(0, Math.min(1, (value - 6) / 4));
+  const hue = 145 - t * 145;
+  return `hsla(${hue}, 70%, 45%, 0.14)`;
 }
 
 /**

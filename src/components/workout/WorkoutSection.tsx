@@ -189,6 +189,7 @@ export function WorkoutSection({ onViewProgress: _onViewProgress }: WorkoutSecti
                 <WorkoutExerciseCard
                   key={exercise.exerciseId}
                   exercise={exercise}
+                  excludeWorkoutId={workout.state.editingWorkoutId}
                   onToggleCollapse={() => workout.toggleExerciseCollapse(exercise.exerciseId)}
                   onToggleHistory={() => workout.toggleExerciseHistory(exercise.exerciseId)}
                   onRemove={() => workout.removeExercise(exercise.exerciseId)}

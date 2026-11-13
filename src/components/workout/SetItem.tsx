@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import type { WorkoutEditorSet } from '../../types';
-import { rpeColor } from '../../lib/utils';
+import { rpeColor, rpeTint } from '../../lib/utils';
 
 interface SetItemProps {
   set: WorkoutEditorSet;
@@ -80,7 +80,7 @@ export function SetItem({
           {set.rpe && (
             <span
               className="px-1.5 py-0.5 rounded text-[11px] font-semibold shrink-0"
-              style={{ backgroundColor: `${rpeColor(Number(set.rpe))}22`, color: rpeColor(Number(set.rpe)) }}
+              style={{ backgroundColor: rpeTint(Number(set.rpe)), color: rpeColor(Number(set.rpe)) }}
             >
               RPE {set.rpe}
             </span>

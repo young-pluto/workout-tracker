@@ -354,3 +354,60 @@ button, input, textarea, select {
   border: 3px solid var(--rpe-fill);
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
 }
+
+/* ==========================================
+ * Data-viz tokens (Analysis tab)
+ * Categorical slots, phase poles and status colors validated for
+ * colorblind separation on both surfaces (#ffffff / #171717).
+ * ========================================== */
+:root {
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-seq-0: #eef4fc;
+  --viz-seq-1: #cde2fb;
+  --viz-seq-2: #9ec5f4;
+  --viz-seq-3: #5598e7;
+  --viz-seq-4: #256abf;
+  --viz-seq-5: #104281;
+  --viz-grid: #ededed;
+  --viz-axis: #d4d4d4;
+  --viz-ink-muted: #a3a3a3;
+  --viz-deemph: #c7c7c7;
+  --viz-surplus: #eb6834;
+  --viz-deficit: #2a78d6;
+  --viz-maintenance: #a3a3a3;
+  --viz-good: #0ca30c;
+  --viz-warning: #fab219;
+  --viz-serious: #ec835a;
+  --viz-critical: #d03b3b;
+  --viz-good-ink: #006300;
+  --viz-critical-ink: #b42323;
+  --viz-surface: #ffffff;
+  --viz-ink: #0a0a0a;
+  --viz-ink-2: #525252;
+}
+
+.dark {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-seq-0: #172231;
+  --viz-seq-1: #1d3a63;
+  --viz-seq-2: #24589a;
+  --viz-seq-3: #2f78d2;
+  --viz-seq-4: #5c9ae6;
+  --viz-seq-5: #a3c8f5;
+  --viz-grid: #262626;
+  --viz-axis: #3a3a3a;
+  --viz-ink-muted: #737373;
+  --viz-deemph: #4a4a4a;
+  --viz-surplus: #d95926;
+  --viz-deficit: #3987e5;
+  --viz-maintenance: #737373;
+  --viz-good-ink: #0ca30c;
+  --viz-critical-ink: #e66767;
+  --viz-surface: #171717;
+  --viz-ink: #fafafa;
+  --viz-ink-2: #a3a3a3;
+}

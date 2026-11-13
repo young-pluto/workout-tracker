@@ -124,7 +124,11 @@ export function ExerciseForm({ isOpen, onClose, exercise }: ExerciseFormProps) {
           label="Muscle group"
           value={muscleGroup}
           onChange={(e) => setMuscleGroup(e.target.value)}
-          options={muscleGroupOptions}
+          options={
+            muscleGroup && !muscleGroupOptions.some((o) => o.value === muscleGroup)
+              ? [...muscleGroupOptions, { value: muscleGroup, label: muscleGroup }]
+              : muscleGroupOptions
+          }
         />
 
         <Input
